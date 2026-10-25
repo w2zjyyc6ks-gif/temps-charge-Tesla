@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Charge Y"><title>Charge Model Y – heures creuses</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f5f7;--card:#fff;--ink:#14202b;--mut:#5b6b79;--line:#d5dce2;--acc:#0b6e6e;--accbg:#d9efee;--warn:#a85a00;--warnbg:#fbe9d2;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10171d;--card:#18222b;--ink:#e8eef3;--mut:#93a3b1;--line:#2b3946;--acc:#5fd0c9;--accbg:#12383a;--warn:#f2b45f;--warnbg:#3b2b12;color-scheme:dark}}
+html{height:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:520px;margin:0 auto;padding:18px 16px 32px}
+h1{font-size:1.25rem;margin:0 0 2px}
+.sub{color:var(--mut);font-size:.875rem;margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+label{display:flex;justify-content:space-between;font-weight:600;margin-bottom:6px}
+label b{color:var(--acc);font-size:1.1rem}
+input[type=range]{width:100%;accent-color:var(--acc);margin:0 0 12px}
+.amps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.amps button{padding:10px 0;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.amps button[aria-pressed=true]{background:var(--acc);color:var(--card);border-color:var(--acc)}
+.row{display:flex;gap:10px;align-items:center;margin-top:12px}
+.row label{margin:0;font-weight:500;flex:1}
+input[type=time]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.tg{grid-template-columns:repeat(2,1fr);margin-bottom:14px}
+.big{font-size:2.1rem;font-weight:700;line-height:1.1}
+.mut{color:var(--mut);font-size:.875rem}
+.bar{position:relative;height:22px;border-radius:6px;background:var(--bg);border:1px solid var(--line);overflow:hidden;margin:10px 0 4px}
+.bar i{position:absolute;top:0;bottom:0;background:var(--accbg)}
+.bar u{position:absolute;top:3px;bottom:3px;background:var(--acc);border-radius:3px;text-decoration:none}
+.bar s{position:absolute;top:3px;bottom:3px;background:var(--warn);border-radius:3px;text-decoration:none}
+.ticks{display:flex;justify-content:space-between;font-size:.75rem;color:var(--mut)}
+.tag{display:inline-block;padding:4px 10px;border-radius:99px;font-size:.875rem;font-weight:600;background:var(--accbg);color:var(--acc)}
+.tag.w{background:var(--warnbg);color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:7px 4px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+tr.sel td{font-weight:700;color:var(--acc)}
+details{font-size:.85rem;color:var(--mut)}
+details input{width:70px;font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+<h1>Charge du Model Y</h1>
+<p class="sub">Propulsion 2026, prise monophasée 230 V. Heures creuses : 1 h–7 h et 12 h 30–14 h 30.</p>
+
+<div class="card">
+  <label for="soc">Batterie actuelle <b id="socv"></b></label>
+  <input type="range" id="soc" min="0" max="99" value="30">
+  <div class="mut" style="margin-bottom:6px">Batterie visée</div>
+  <div class="amps tg" id="tgs"><button type="button" data-t="80" aria-pressed="true">80 %</button><button type="button" data-t="100" aria-pressed="false">100 %</button></div>
+  <div class="mut" style="margin-bottom:6px">Intensité</div>
+  <div class="amps" id="amps"></div>
+  <div class="row"><label for="start">Début de la charge</label><input type="time" id="start" value="01:00"></div>
+</div>
+
+<div class="card">
+  <div class="big" id="dur"></div>
+  <div class="mut" id="det"></div>
+  <div id="cost" style="margin-top:6px;font-weight:600"></div>
+  <div class="bar" id="bar"></div>
+  <div class="ticks"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
+  <p style="margin:10px 0 6px"><span class="tag" id="tag"></span></p>
+  <div id="adv"></div>
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>Intensité</th><th>Puissance</th><th>Durée</th><th>% en HC</th><th>Coût</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+</div>
+
+<details class="card">
+  <summary>Hypothèses modifiables</summary>
+  <p>Capacité utile (kWh) <input type="number" id="cap" value="61" step="0.5" min="40" max="90"></p>
+  <p>Rendement de charge (%) <input type="number" id="eff" value="90" step="1" min="70" max="100"></p>
+  <p>Tension (V) <input type="number" id="volt" value="230" step="1" min="200" max="250"></p>
+  <p>Tarif heures creuses (€/kWh) <input type="number" id="phc" value="0.15" step="0.01" min="0"></p>
+  <p>Tarif heures pleines (€/kWh) <input type="number" id="php" value="0.21" step="0.01" min="0"></p>
+  <p>La capacité utile du Model Y Standard est donnée entre 60 et 62,5 kWh selon les sources. Le rendement baisse un peu à faible intensité (pertes du chargeur et de la gestion thermique).</p>
+</details>
+</main>
+<script>
+var HC=[[60,420],[750,870]],AMPS=[8,10,13,16],amp=16,tgt=80;
+var $=function(i){return document.getElementById(i)};
+function fmtH(h){var m=Math.round(h*60),a=Math.floor(m/60),b=m%60;return a+" h "+(b<10?"0":"")+b}
+function fmtT(m){m=((Math.round(m)%1440)+1440)%1440;var a=Math.floor(m/60),b=m%60;return a+" h "+(b<10?"0":"")+b}
+function hcMin(s,d){var t=0;for(var k=0;k<2;k++){for(var w=0;w<2;w++){var a=HC[w][0]+k*1440,b=HC[w][1]+k*1440;t+=Math.max(0,Math.min(s+d,b)-Math.max(s,a))}}
+ for(var w2=0;w2<2;w2++){var a2=HC[w2][0]+2880,b2=HC[w2][1]+2880;t+=Math.max(0,Math.min(s+d,b2)-Math.max(s,a2))}return t}
+function calc(a){var cap=+$("cap").value,eff=+$("eff").value/100,v=+$("volt").value;
+ var e=Math.max(0,cap*(tgt-+$("soc").value)/100)/eff,p=a*v/1000;return{e:e,p:p,h:e/p+(tgt===100&&e>0?0.75:0)}}
+function startMin(){var s=$("start").value.split(":");return (+s[0])*60+(+s[1])}
+function seg(cls,s,d){var o="",x=s%1440,r=d;while(r>0){var l=Math.min(r,1440-x);o+="<"+cls+" style='left:"+x/14.4+"%;width:"+l/14.4+"%'></"+cls+">";r-=l;x=0}return o}
+function eur(x){return x.toFixed(2).replace(".",",")}
+function cost(e,f){return e*(f*(+$("phc").value)+(1-f)*(+$("php").value))}
+function render(){
+ $("socv").textContent=$("soc").value+" %";
+ var r=calc(amp),s=startMin(),d=r.h*60,hc=hcMin(s,d),pct=d>0?Math.round(100*hc/d):0;
+ $("dur").textContent=r.e>0?fmtH(r.h):"–";
+ $("det").textContent=r.e>0?(r.e.toFixed(1).replace(".",",")+" kWh depuis le réseau à "+r.p.toFixed(1).replace(".",",")+" kW, fin à "+fmtT(s+d)+(tgt===100?", marge de 45 min incluse":"")):"La batterie visée doit dépasser la batterie actuelle.";
+ $("cost").textContent=r.e>0?"Coût : "+eur(cost(r.e,d>0?hc/d:0))+" €":"";
+ var b="";for(var w=0;w<2;w++)b+="<i style='left:"+HC[w][0]/14.4+"%;width:"+(HC[w][1]-HC[w][0])/14.4+"%'></i>";
+ b+=seg("u",s,Math.min(d,1440));$("bar").innerHTML=b;
+ var tag=$("tag");
+ if(r.e<=0){tag.textContent="Rien à charger";tag.className="tag w";$("adv").innerHTML="";}
+ else{tag.textContent=pct+" % en heures creuses";tag.className="tag"+(pct<100?" w":"");
+  var best=420-d,adv;
+  if(d<=360){adv="Pour terminer à 7 h pile, démarrez à <b>"+fmtT(best)+"</b> : tout est en heures creuses."}
+  else{adv="Trop long pour la plage 1 h–7 h : comptez "+fmtH(d/60-6)+" hors heures creuses, ou passez à une intensité plus élevée."}
+  $("adv").innerHTML="<div class='mut'>"+adv+"</div>"}
+ var rows="";AMPS.forEach(function(a){var c=calc(a),dd=c.h*60,pp=dd>0?Math.round(100*hcMin(s,dd)/dd):0;
+  rows+="<tr"+(a===amp?" class='sel'":"")+"><td>"+a+" A</td><td>"+c.p.toFixed(1).replace(".",",")+" kW</td><td>"+(c.e>0?fmtH(c.h):"–")+"</td><td>"+(c.e>0?pp+" %":"–")+"</td><td>"+(c.e>0?eur(cost(c.e,pp/100))+" €":"–")+"</td></tr>"});
+ $("tb").innerHTML=rows}
+function mkAmps(){var h="";AMPS.forEach(function(a){h+="<button type='button' data-a='"+a+"' aria-pressed='"+(a===amp)+"'>"+a+" A</button>"});$("amps").innerHTML=h}
+$("amps").addEventListener("click",function(e){var a=e.target.getAttribute("data-a");if(a){amp=+a;mkAmps();render()}});
+["soc","start","phc","php","cap","eff","volt"].forEach(function(i){$(i).addEventListener("input",render)});
+$("tgs").addEventListener("click",function(e){var t=e.target.getAttribute("data-t");if(t){tgt=+t;var b=$("tgs").children;for(var i=0;i<b.length;i++)b[i].setAttribute("aria-pressed",String(+b[i].getAttribute("data-t")===tgt));render()}});
+mkAmps();render();
+</script>
+</body>
+</html>
